@@ -1,5 +1,7 @@
 ﻿using Application.Abstractions;
+using Domain.Entities;
 using Domain.Repositories;
+using Domain.Shared;
 using MediatR;
 
 namespace Application.Invitations.Commands.SendInvitation; 
@@ -37,9 +39,14 @@ internal sealed class SendInvitationCommandHandler : IRequestHandler<SendInvitat
             return Unit.Value;
         }
 
-        var invitation = gathering.SendInvitations(member);
+        Result<Invitation> invitationResult = gathering.SendInvitations(member);
 
-        _invitationRepository.Add(invitation);
+        if (invitationResult.IsFailure)
+        {
+            return Unit.Value;
+        }
+
+        _invitationRepository.Add(invitationResult.Value);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

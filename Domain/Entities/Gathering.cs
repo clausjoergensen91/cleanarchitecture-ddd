@@ -1,9 +1,11 @@
 ﻿using Domain.Enums;
+using Domain.Errors;
 using Domain.Exceptions;
 using Domain.Primitives;
+using Domain.Shared;
 
 namespace Domain.Entities;
-public sealed class Gathering : Entity 
+public sealed class Gathering : AggregateRoot 
 {
 
     private readonly List<Invitation> _invitations = new();
@@ -82,16 +84,16 @@ public sealed class Gathering : Entity
         return gathering;
     }
 
-    public Invitation SendInvitations(Member member)
+    public Result<Invitation> SendInvitations(Member member)
     {
         if (Creator.Id == member.Id)
         {
-            throw new Exception("Can't send invitation to the gathering creator.");
+            return Result.Failure<Invitation>(DomainErrors.Gathering.InvitingCreator);
         }
 
         if (ScheduleAtUtc < DateTime.UtcNow)
         {
-            throw new Exception("Can't send invitation for gathering in the past.");
+            return Result.Failure<Invitation>(DomainErrors.Gathering.AlreadyPassed);
         }
 
         var invitation = new Invitation(Guid.NewGuid(), member, this);
@@ -101,7 +103,7 @@ public sealed class Gathering : Entity
         return invitation;
     }
 
-    public Attendee? AcceptInvitation(Invitation invitation)
+    public Result<Attendee> AcceptInvitation(Invitation invitation)
     {
         var expired = (Type == GatheringType.WithFixedNumberOfAttendees &&
                        NumberOfAttendees == MaximumNumberOfAttendees) ||
@@ -112,7 +114,7 @@ public sealed class Gathering : Entity
         {
             invitation.Expire();
 
-            return null;
+            return Result.Failure<Attendee>(DomainErrors.Attendee.InvitationExpired);
         }
 
         var attendee = invitation.Accept();

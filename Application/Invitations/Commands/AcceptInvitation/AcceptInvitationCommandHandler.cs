@@ -1,10 +1,11 @@
 ﻿using Application.Abstractions;
+using Domain.Entities;
 using Domain.Enums;
 using Domain.Repositories;
+using Domain.Shared;
 using MediatR;
 
-namespace Application.Invitations.Commands.AcceptInvitation
-{
+namespace Application.Invitations.Commands.AcceptInvitation {
     internal class AcceptInvitationCommandHandler : IRequestHandler<AcceptInvitationCommand> {
 
         private readonly IMemberRepository _memberRepository;
@@ -32,29 +33,27 @@ namespace Application.Invitations.Commands.AcceptInvitation
 
         public async Task<Unit> Handle(AcceptInvitationCommand request, CancellationToken cancellationToken)
         {
-            var invitation = await _invitationRepository
-                .GetByIdAsync(request.InvitationId, cancellationToken);
+            var gathering = await _gatheringRepository
+                .GetByIdWithCreatorAsync(request.GatheringId, cancellationToken);
+
+            if (gathering is null)
+            {
+                return Unit.Value;
+            }
+
+            var invitation = gathering.Invitations
+                .FirstOrDefault(i => i.Id == request.InvitationId);
 
             if (invitation is null || invitation.Status != InvitationStatus.Pending)
             {
                 return Unit.Value;
             }
 
-            var member = await _memberRepository.GetByIdAsync(invitation.MemberId, cancellationToken);
+            Result<Attendee> attendeeResult = gathering.AcceptInvitation(invitation);
 
-            var gathering = await _gatheringRepository
-                .GetByIdWithCreatorAsync(invitation.GatheringId, cancellationToken);
-
-            if (member is null || gathering is null)
+            if (attendeeResult.IsSuccess)
             {
-                return Unit.Value;
-            }
-
-            var attendee = gathering.AcceptInvitation(invitation);
-
-            if (attendee is not null)
-            {
-                _attendeeRepository.Add(attendee);
+                _attendeeRepository.Add(attendeeResult.Value);
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
