@@ -21,8 +21,10 @@ public sealed class CreateMemberCommandHandler : IRequestHandler<CreateMemberCom
 	public async Task<Unit> Handle(CreateMemberCommand request, CancellationToken cancellationToken)
 	{
         var firstNameResult = FirstName.Create(request.FirstName);
+        var lastNameResult = LastName.Create(request.LastName);
+        var emailResult = Email.Create(request.Email);
 
-        if (firstNameResult.IsFailure)
+        if (firstNameResult.IsFailure || lastNameResult.IsFailure || emailResult.IsFailure)
         {
             // Log error
             return Unit.Value;
