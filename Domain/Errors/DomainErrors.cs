@@ -11,12 +11,9 @@ public static class DomainErrors {
         public static readonly Error AlreadyPassed = new Error(
             "Gathering.AlreadyPassed",
             "Can't send invitation for gathering in the past.");
-    }
 
-    public static class Attendee
-    {
-        public static readonly Error InvitationExpired = new Error(
+        public static readonly Error Expired = new Error(
             "Attendee.InvitationExpired",
-            "Attendee can't accept invitation that has expired.");
+            "Can't send invitation that has expired.");
     }
 }

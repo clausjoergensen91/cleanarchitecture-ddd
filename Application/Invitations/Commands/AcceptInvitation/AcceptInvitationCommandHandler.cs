@@ -58,11 +58,6 @@ namespace Application.Invitations.Commands.AcceptInvitation {
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            if (invitation.Status == InvitationStatus.Accepted)
-            {
-                await _emailService.SendInvitationAcceptedEmailAsync(gathering, cancellationToken);
-            }
-
             return Unit.Value;
         }
     }

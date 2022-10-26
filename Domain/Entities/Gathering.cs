@@ -1,4 +1,5 @@
-﻿using Domain.Enums;
+﻿using Domain.DomainEvents;
+using Domain.Enums;
 using Domain.Errors;
 using Domain.Exceptions;
 using Domain.Primitives;
@@ -105,19 +106,27 @@ public sealed class Gathering : AggregateRoot
 
     public Result<Attendee> AcceptInvitation(Invitation invitation)
     {
-        var expired = (Type == GatheringType.WithFixedNumberOfAttendees &&
-                       NumberOfAttendees == MaximumNumberOfAttendees) ||
-                      (Type == GatheringType.WithExpirationForInvitations &&
-                       InvitationsExpireAtUtc < DateTime.UtcNow);
+        var reachedMaximumNumberOfAttendees =
+            Type == GatheringType.WithFixedNumberOfAttendees &&
+            NumberOfAttendees == MaximumNumberOfAttendees;
+
+        var reachedInvitationsExpiration =
+            Type == GatheringType.WithExpirationForInvitations &&
+            InvitationsExpireAtUtc < DateTime.UtcNow;
+
+        var expired = reachedInvitationsExpiration ||
+                      reachedMaximumNumberOfAttendees;
 
         if (expired)
         {
             invitation.Expire();
 
-            return Result.Failure<Attendee>(DomainErrors.Attendee.InvitationExpired);
+            return Result.Failure<Attendee>(DomainErrors.Gathering.Expired);
         }
 
         var attendee = invitation.Accept();
+
+        RaiseDomainEvent(new InvitationAcceptedDomainEvent(invitation.Id, Id));
 
         _attendees.Add(attendee);
         NumberOfAttendees++;
